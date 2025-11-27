@@ -26,7 +26,7 @@
 
     <!-- Footer -->
     <footer class="absolute bottom-4 text-center text-slate-600 text-sm">
-      <p>⚽ 31-Day Keepy-Upps Challenge</p>
+      <p>⚽ 25-Day Keepy-Upps Challenge</p>
     </footer>
   </div>
 </template>

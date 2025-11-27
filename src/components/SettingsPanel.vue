@@ -116,14 +116,14 @@
               for="currentDay"
               class="block text-sm font-medium text-slate-300 mb-2"
             >
-              Current Day (1-31)
+              Current Day (1-25)
             </label>
             <input
               id="currentDay"
               v-model="form.currentDay"
               type="number"
               min="1"
-              max="31"
+              max="25"
               class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="1"
             />
@@ -208,7 +208,7 @@
         <div class="mt-8 p-4 bg-slate-700/50 rounded-lg">
           <h4 class="font-medium text-slate-300 mb-2">About</h4>
           <p class="text-sm text-slate-400">
-            31-Day Keepy-Upps Challenge<br />
+            25-Day Keepy-Upps Challenge<br />
             Track your daily football juggling goals!
           </p>
           <p class="text-sm text-slate-500 mt-2">
@@ -261,8 +261,8 @@ function validateForm() {
   if (form.tickRateMs < 50 || form.tickRateMs > 5000) {
     return "Tick rate must be between 50ms and 5000ms";
   }
-  if (form.currentDay < 1 || form.currentDay > 31) {
-    return "Current day must be between 1 and 31";
+  if (form.currentDay < 1 || form.currentDay > 25) {
+    return "Current day must be between 1 and 25";
   }
   if (form.counter < 0 || form.counter > form.dailyStartValue) {
     return `Counter must be between 0 and ${form.dailyStartValue}`;

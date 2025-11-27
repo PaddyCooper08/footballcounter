@@ -6,7 +6,7 @@ export const useCounterStore = defineStore('counter', () => {
   // Default settings
   const DEFAULT_DAILY_START = 40000
   const DEFAULT_TICK_RATE_MS = 360 // 1000 keepy-upps / (6 * 60 seconds) ≈ 360ms per tick
-  const TOTAL_DAYS = 31
+  const TOTAL_DAYS = 25
 
   // State
   const counter = ref(DEFAULT_DAILY_START)

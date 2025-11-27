@@ -1,4 +1,4 @@
-# ⚽ 31-Day Football Keepy-Upps Challenge
+# ⚽ 25-Day Football Keepy-Upps Challenge
 
 A beautiful, fullscreen countdown timer app for tracking your daily football juggling (keepy-upps) goals. Built with Vue 3, Vite, and Tailwind CSS.
 
@@ -10,7 +10,7 @@ A beautiful, fullscreen countdown timer app for tracking your daily football jug
 
 - **Giant Countdown Display**: Massive, high-visibility counter perfect for glancing at during practice
 - **Real-time Tick-down**: Counter decrements 1 unit every ~360ms (1,000 per 6 minutes)
-- **31-Day Challenge Tracking**: Automatic day progression with daily goal resets
+- **25-Day Challenge Tracking**: Automatic day progression with daily goal resets
 - **Pause/Resume**: Large button for easy tap control
 - **Persistence**: All progress saved to localStorage - survives browser restarts
 - **Confetti Celebration**: Fun animation when you complete a day's goal!
@@ -69,7 +69,7 @@ Access settings via the gear icon in the top-right corner:
 | ----------------- | ------- | ------------------------------------------------ |
 | Daily Start Value | 40,000  | Target keepy-upps per day                        |
 | Tick Rate         | 360ms   | How fast the counter decrements (1 per interval) |
-| Current Day       | 1       | Day of the challenge (1-31)                      |
+| Current Day       | 1       | Day of the challenge (1-25)                      |
 | Current Counter   | -       | Manual override for the counter value            |
 
 ## 🎮 Controls
@@ -151,7 +151,7 @@ The app uses `requestAnimationFrame` for smooth, drift-resistant timing:
 All state is stored in `localStorage`:
 
 - `counter` - Current countdown value
-- `currentDay` - Day of the challenge (1-31)
+- `currentDay` - Day of the challenge (1-25)
 - `isPaused` - Timer pause state
 - `dailyStartValue` - Customized daily target
 - `tickRateMs` - Custom tick interval
