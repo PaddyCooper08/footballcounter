@@ -5,7 +5,7 @@ import { loadState, saveState, getTodayDateString } from '../utils/persistence'
 export const useCounterStore = defineStore('counter', () => {
   // Default settings
   const DEFAULT_DAILY_START = 40000
-  const DEFAULT_TICK_RATE_MS = 360 // 1000 keepy-upps / (6 * 60 seconds) ≈ 360ms per tick
+  const DEFAULT_TICK_RATE_MS = 390 // 1000 keepy-upps / (6.5 * 60 seconds) = 390ms per tick
   const TOTAL_DAYS = 25
 
   // State
@@ -18,7 +18,7 @@ export const useCounterStore = defineStore('counter', () => {
   const challengeStartDate = ref('')
   const isAnimating = ref(false)
   const showSuccess = ref(false)
-  const bulkMode = ref(true) // true = decrement 1000 every 1000 ticks, false = decrement 1 every tick
+  const bulkMode = ref('hundred') // 'single' = -1 per tick, 'hundred' = -100 per 100 ticks, 'thousand' = -1000 per 1000 ticks
   const tickCounter = ref(0) // tracks ticks in bulk mode
 
   // Computed
@@ -43,8 +43,8 @@ export const useCounterStore = defineStore('counter', () => {
     if (!isPaused.value && counter.value > 0) {
       lastTickTimestamp.value = Date.now()
       
-      if (bulkMode.value) {
-        // Bulk mode: decrement 1000 every 1000 ticks
+      if (bulkMode.value === 'thousand') {
+        // Thousand mode: decrement 1000 every 1000 ticks
         tickCounter.value++
         if (tickCounter.value >= 1000) {
           tickCounter.value = 0
@@ -55,8 +55,20 @@ export const useCounterStore = defineStore('counter', () => {
             isAnimating.value = false
           }, 150)
         }
+      } else if (bulkMode.value === 'hundred') {
+        // Hundred mode: decrement 100 every 100 ticks
+        tickCounter.value++
+        if (tickCounter.value >= 100) {
+          tickCounter.value = 0
+          counter.value = Math.max(0, counter.value - 100)
+          isAnimating.value = true
+          
+          setTimeout(() => {
+            isAnimating.value = false
+          }, 150)
+        }
       } else {
-        // Normal mode: decrement 1 every tick
+        // Single mode: decrement 1 every tick
         counter.value--
         isAnimating.value = true
         
@@ -156,9 +168,11 @@ export const useCounterStore = defineStore('counter', () => {
   }
 
   function setBulkMode(value) {
-    bulkMode.value = !!value
-    tickCounter.value = 0 // Reset tick counter when switching modes
-    persistState()
+    if (['single', 'hundred', 'thousand'].includes(value)) {
+      bulkMode.value = value
+      tickCounter.value = 0 // Reset tick counter when switching modes
+      persistState()
+    }
   }
 
   function hideSuccess() {
@@ -209,19 +223,25 @@ export const useCounterStore = defineStore('counter', () => {
         dailyStartValue.value = saved.dailyStartValue ?? DEFAULT_DAILY_START
         tickRateMs.value = saved.tickRateMs ?? DEFAULT_TICK_RATE_MS
         challengeStartDate.value = saved.challengeStartDate || todayStr
-        bulkMode.value = saved.bulkMode ?? true
+        bulkMode.value = saved.bulkMode ?? 'hundred'
         tickCounter.value = saved.tickCounter ?? 0
         
         // If it was running, calculate elapsed ticks
         if (!saved.isPaused && saved.lastTickTimestamp) {
           const elapsed = Date.now() - saved.lastTickTimestamp
           const missedTicks = Math.floor(elapsed / (saved.tickRateMs || DEFAULT_TICK_RATE_MS))
-          if (bulkMode.value) {
-            // In bulk mode, add missed ticks to counter and calculate decrements
+          if (bulkMode.value === 'thousand') {
+            // In thousand mode, add missed ticks to counter and calculate decrements
             const totalTicks = tickCounter.value + missedTicks
             const decrements = Math.floor(totalTicks / 1000)
             tickCounter.value = totalTicks % 1000
             counter.value = Math.max(0, counter.value - (decrements * 1000))
+          } else if (bulkMode.value === 'hundred') {
+            // In hundred mode, add missed ticks to counter and calculate decrements
+            const totalTicks = tickCounter.value + missedTicks
+            const decrements = Math.floor(totalTicks / 100)
+            tickCounter.value = totalTicks % 100
+            counter.value = Math.max(0, counter.value - (decrements * 100))
           } else {
             counter.value = Math.max(0, counter.value - missedTicks)
           }

@@ -106,7 +106,7 @@
               placeholder="360"
             />
             <p class="mt-1 text-sm text-slate-400">
-              Default: 360ms (1000 per 6 minutes ≈ 2.78/sec)
+              Default: 390ms (1000 per 6.5 minutes)
             </p>
           </div>
 
@@ -115,13 +115,13 @@
             <label class="block text-sm font-medium text-slate-300 mb-3">
               Counting Mode
             </label>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
               <button
                 type="button"
-                @click="form.bulkMode = false"
-                class="flex-1 px-4 py-3 rounded-lg font-medium transition-all"
+                @click="form.bulkMode = 'single'"
+                class="flex-1 px-3 py-3 rounded-lg font-medium transition-all text-sm"
                 :class="
-                  !form.bulkMode
+                  form.bulkMode === 'single'
                     ? 'bg-blue-600 text-white'
                     : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
                 "
@@ -130,21 +130,35 @@
               </button>
               <button
                 type="button"
-                @click="form.bulkMode = true"
-                class="flex-1 px-4 py-3 rounded-lg font-medium transition-all"
+                @click="form.bulkMode = 'hundred'"
+                class="flex-1 px-3 py-3 rounded-lg font-medium transition-all text-sm"
                 :class="
-                  form.bulkMode
+                  form.bulkMode === 'hundred'
                     ? 'bg-blue-600 text-white'
                     : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
                 "
               >
-                -1000 per 1000 ticks
+                -100 / 100
+              </button>
+              <button
+                type="button"
+                @click="form.bulkMode = 'thousand'"
+                class="flex-1 px-3 py-3 rounded-lg font-medium transition-all text-sm"
+                :class="
+                  form.bulkMode === 'thousand'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                "
+              >
+                -1000 / 1000
               </button>
             </div>
             <p class="mt-2 text-sm text-slate-400">
               {{
-                form.bulkMode
+                form.bulkMode === "thousand"
                   ? "Counter decreases by 1000 after every 1000 intervals"
+                  : form.bulkMode === "hundred"
+                  ? "Counter decreases by 100 after every 100 intervals"
                   : "Counter decreases by 1 every interval"
               }}
             </p>
@@ -340,10 +354,10 @@ function saveSettings() {
 
 function resetToDefaults() {
   form.dailyStartValue = 40000;
-  form.tickRateMs = 360;
+  form.tickRateMs = 390;
   form.currentDay = 1;
   form.counter = 40000;
-  form.bulkMode = true;
+  form.bulkMode = "hundred";
 }
 
 function resetAllData() {
