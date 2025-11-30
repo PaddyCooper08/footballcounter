@@ -110,6 +110,46 @@
             </p>
           </div>
 
+          <!-- Counting Mode Toggle -->
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-3">
+              Counting Mode
+            </label>
+            <div class="flex items-center gap-4">
+              <button
+                type="button"
+                @click="form.bulkMode = false"
+                class="flex-1 px-4 py-3 rounded-lg font-medium transition-all"
+                :class="
+                  !form.bulkMode
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                "
+              >
+                -1 per tick
+              </button>
+              <button
+                type="button"
+                @click="form.bulkMode = true"
+                class="flex-1 px-4 py-3 rounded-lg font-medium transition-all"
+                :class="
+                  form.bulkMode
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                "
+              >
+                -1000 per 1000 ticks
+              </button>
+            </div>
+            <p class="mt-2 text-sm text-slate-400">
+              {{
+                form.bulkMode
+                  ? "Counter decreases by 1000 after every 1000 intervals"
+                  : "Counter decreases by 1 every interval"
+              }}
+            </p>
+          </div>
+
           <!-- Current Day -->
           <div>
             <label
@@ -236,6 +276,7 @@ const form = reactive({
   tickRateMs: store.tickRateMs,
   currentDay: store.currentDay,
   counter: store.counter,
+  bulkMode: store.bulkMode,
 });
 
 // Sync form with store when panel opens
@@ -245,6 +286,7 @@ watch(isOpen, (open) => {
     form.tickRateMs = store.tickRateMs;
     form.currentDay = store.currentDay;
     form.counter = store.counter;
+    form.bulkMode = store.bulkMode;
     error.value = "";
     success.value = false;
   }
@@ -288,6 +330,7 @@ function saveSettings() {
   store.setTickRateMs(form.tickRateMs);
   store.setDay(form.currentDay);
   store.setCounter(form.counter);
+  store.setBulkMode(form.bulkMode);
 
   success.value = true;
   setTimeout(() => {
@@ -300,6 +343,7 @@ function resetToDefaults() {
   form.tickRateMs = 360;
   form.currentDay = 1;
   form.counter = 40000;
+  form.bulkMode = true;
 }
 
 function resetAllData() {

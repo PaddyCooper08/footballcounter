@@ -18,6 +18,8 @@ export const useCounterStore = defineStore('counter', () => {
   const challengeStartDate = ref('')
   const isAnimating = ref(false)
   const showSuccess = ref(false)
+  const bulkMode = ref(true) // true = decrement 1000 every 1000 ticks, false = decrement 1 every tick
+  const tickCounter = ref(0) // tracks ticks in bulk mode
 
   // Computed
   const formattedCounter = computed(() => {
@@ -39,24 +41,40 @@ export const useCounterStore = defineStore('counter', () => {
   // Actions
   function tick() {
     if (!isPaused.value && counter.value > 0) {
-      counter.value--
       lastTickTimestamp.value = Date.now()
-      isAnimating.value = true
       
-      // Reset animation flag after animation completes
-      setTimeout(() => {
-        isAnimating.value = false
-      }, 150)
+      if (bulkMode.value) {
+        // Bulk mode: decrement 1000 every 1000 ticks
+        tickCounter.value++
+        if (tickCounter.value >= 1000) {
+          tickCounter.value = 0
+          counter.value = Math.max(0, counter.value - 1000)
+          isAnimating.value = true
+          
+          setTimeout(() => {
+            isAnimating.value = false
+          }, 150)
+        }
+      } else {
+        // Normal mode: decrement 1 every tick
+        counter.value--
+        isAnimating.value = true
+        
+        setTimeout(() => {
+          isAnimating.value = false
+        }, 150)
+      }
 
       // Check for completion
       if (counter.value <= 0) {
         counter.value = 0
         isPaused.value = true
         showSuccess.value = true
+        tickCounter.value = 0
       }
 
       // Save state periodically (every 10 ticks to reduce writes)
-      if (counter.value % 10 === 0) {
+      if (tickCounter.value % 100 === 0 || counter.value % 10 === 0) {
         persistState()
       }
     }
@@ -137,6 +155,12 @@ export const useCounterStore = defineStore('counter', () => {
     return false
   }
 
+  function setBulkMode(value) {
+    bulkMode.value = !!value
+    tickCounter.value = 0 // Reset tick counter when switching modes
+    persistState()
+  }
+
   function hideSuccess() {
     showSuccess.value = false
   }
@@ -151,6 +175,8 @@ export const useCounterStore = defineStore('counter', () => {
       lastTickTimestamp: lastTickTimestamp.value,
       challengeStartDate: challengeStartDate.value,
       lastDateString: getTodayDateString(),
+      bulkMode: bulkMode.value,
+      tickCounter: tickCounter.value,
     })
   }
 
@@ -183,12 +209,22 @@ export const useCounterStore = defineStore('counter', () => {
         dailyStartValue.value = saved.dailyStartValue ?? DEFAULT_DAILY_START
         tickRateMs.value = saved.tickRateMs ?? DEFAULT_TICK_RATE_MS
         challengeStartDate.value = saved.challengeStartDate || todayStr
+        bulkMode.value = saved.bulkMode ?? true
+        tickCounter.value = saved.tickCounter ?? 0
         
         // If it was running, calculate elapsed ticks
         if (!saved.isPaused && saved.lastTickTimestamp) {
           const elapsed = Date.now() - saved.lastTickTimestamp
           const missedTicks = Math.floor(elapsed / (saved.tickRateMs || DEFAULT_TICK_RATE_MS))
-          counter.value = Math.max(0, counter.value - missedTicks)
+          if (bulkMode.value) {
+            // In bulk mode, add missed ticks to counter and calculate decrements
+            const totalTicks = tickCounter.value + missedTicks
+            const decrements = Math.floor(totalTicks / 1000)
+            tickCounter.value = totalTicks % 1000
+            counter.value = Math.max(0, counter.value - (decrements * 1000))
+          } else {
+            counter.value = Math.max(0, counter.value - missedTicks)
+          }
         }
         
         isPaused.value = saved.isPaused ?? true
@@ -220,6 +256,8 @@ export const useCounterStore = defineStore('counter', () => {
     lastTickTimestamp,
     isAnimating,
     showSuccess,
+    bulkMode,
+    tickCounter,
     TOTAL_DAYS,
 
     // Computed
@@ -239,6 +277,7 @@ export const useCounterStore = defineStore('counter', () => {
     setDay,
     setDailyStartValue,
     setTickRateMs,
+    setBulkMode,
     hideSuccess,
     persistState,
     initializeState,
