@@ -66,8 +66,65 @@
 
         <!-- Form -->
         <div class="space-y-6">
-          <!-- Daily Start Value -->
+          <!-- Count Direction Mode -->
           <div>
+            <label class="block text-sm font-medium text-slate-300 mb-3">
+              Count Direction
+            </label>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                @click="form.countUpMode = true"
+                class="flex-1 px-3 py-3 rounded-lg font-medium transition-all text-sm"
+                :class="
+                  form.countUpMode
+                    ? 'bg-green-600 text-white'
+                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                "
+              >
+                ⬆️ Count Up to 1M
+              </button>
+              <button
+                type="button"
+                @click="form.countUpMode = false"
+                class="flex-1 px-3 py-3 rounded-lg font-medium transition-all text-sm"
+                :class="
+                  !form.countUpMode
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                "
+              >
+                ⬇️ Count Down
+              </button>
+            </div>
+          </div>
+
+          <!-- Keepy-Upps Remaining (only for count up mode) -->
+          <div v-if="form.countUpMode">
+            <label
+              for="keepsRemaining"
+              class="block text-sm font-medium text-slate-300 mb-2"
+            >
+              Keepy-Upps Remaining to 1 Million
+            </label>
+            <input
+              id="keepsRemaining"
+              v-model="form.keepsRemaining"
+              type="number"
+              min="1"
+              max="1000000"
+              class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="40000"
+            />
+            <p class="mt-1 text-sm text-slate-400">
+              Counter will start at
+              {{ (1000000 - form.keepsRemaining).toLocaleString() }} and count
+              up to 1,000,000
+            </p>
+          </div>
+
+          <!-- Daily Start Value (only for count down mode) -->
+          <div v-if="!form.countUpMode">
             <label
               for="dailyStart"
               class="block text-sm font-medium text-slate-300 mb-2"
@@ -291,6 +348,8 @@ const form = reactive({
   currentDay: store.currentDay,
   counter: store.counter,
   bulkMode: store.bulkMode,
+  countUpMode: store.countUpMode,
+  keepsRemaining: store.keepsRemaining,
 });
 
 // Sync form with store when panel opens
@@ -301,6 +360,8 @@ watch(isOpen, (open) => {
     form.currentDay = store.currentDay;
     form.counter = store.counter;
     form.bulkMode = store.bulkMode;
+    form.countUpMode = store.countUpMode;
+    form.keepsRemaining = store.keepsRemaining;
     error.value = "";
     success.value = false;
   }
@@ -320,8 +381,14 @@ function validateForm() {
   if (form.currentDay < 1 || form.currentDay > 25) {
     return "Current day must be between 1 and 25";
   }
-  if (form.counter < 0 || form.counter > form.dailyStartValue) {
-    return `Counter must be between 0 and ${form.dailyStartValue}`;
+  if (form.countUpMode) {
+    if (form.keepsRemaining < 1 || form.keepsRemaining > 1000000) {
+      return "Keepy-upps remaining must be between 1 and 1,000,000";
+    }
+  } else {
+    if (form.counter < 0 || form.counter > form.dailyStartValue) {
+      return `Counter must be between 0 and ${form.dailyStartValue}`;
+    }
   }
   return null;
 }
@@ -343,8 +410,12 @@ function saveSettings() {
   store.setDailyStartValue(form.dailyStartValue);
   store.setTickRateMs(form.tickRateMs);
   store.setDay(form.currentDay);
-  store.setCounter(form.counter);
   store.setBulkMode(form.bulkMode);
+  store.setKeepsRemaining(form.keepsRemaining);
+  store.setCountUpMode(form.countUpMode);
+  if (!form.countUpMode) {
+    store.setCounter(form.counter);
+  }
 
   success.value = true;
   setTimeout(() => {
@@ -358,6 +429,8 @@ function resetToDefaults() {
   form.currentDay = 1;
   form.counter = 40000;
   form.bulkMode = "hundred";
+  form.countUpMode = true;
+  form.keepsRemaining = 40000;
 }
 
 function resetAllData() {

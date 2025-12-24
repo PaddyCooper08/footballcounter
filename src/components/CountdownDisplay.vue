@@ -10,11 +10,18 @@
         }"
         role="timer"
         aria-live="polite"
-        aria-label="Keepy-upps remaining"
+        :aria-label="
+          store.countUpMode ? 'Keepy-upps completed' : 'Keepy-upps remaining'
+        "
       >
         {{ store.formattedCounter }}
       </span>
     </div>
+
+    <!-- Target indicator for count up mode -->
+    <p v-if="store.countUpMode" class="mt-2 text-xl text-slate-500 font-medium">
+      / 1,000,000
+    </p>
 
     <!-- Day Indicator -->
     <p
@@ -34,19 +41,22 @@
     >
       <div
         class="h-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-300 ease-out"
-        :style="{ width: `${store.progress}%` }"
+        :style="{ width: `${Math.min(100, Math.max(0, store.progress))}%` }"
       ></div>
     </div>
 
     <!-- Status Text -->
     <p class="mt-3 text-lg text-slate-500">
       <span v-if="store.isComplete" class="text-green-400 font-semibold">
-        🎉 Daily goal complete!
+        🎉
+        {{ store.countUpMode ? "1 Million reached!" : "Daily goal complete!" }}
       </span>
       <span v-else-if="store.isPaused" class="text-yellow-400">
         ⏸️ Paused
       </span>
-      <span v-else class="text-blue-400"> ⚽ Counting... </span>
+      <span v-else class="text-blue-400">
+        ⚽ {{ store.countUpMode ? "Counting up..." : "Counting down..." }}
+      </span>
     </p>
   </div>
 </template>

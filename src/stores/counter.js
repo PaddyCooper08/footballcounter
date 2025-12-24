@@ -7,9 +7,11 @@ export const useCounterStore = defineStore('counter', () => {
   const DEFAULT_DAILY_START = 40000
   const DEFAULT_TICK_RATE_MS = 390 // 1000 keepy-upps / (6.5 * 60 seconds) = 390ms per tick
   const TOTAL_DAYS = 25
+  const DEFAULT_TARGET_GOAL = 1000000 // 1 million
+  const DEFAULT_KEEPY_UPS_REMAINING = 40000 // keepy-upps remaining to hit goal
 
   // State
-  const counter = ref(DEFAULT_DAILY_START)
+  const counter = ref(DEFAULT_TARGET_GOAL - DEFAULT_KEEPY_UPS_REMAINING) // Start at 960,000
   const currentDay = ref(1)
   const isPaused = ref(true)
   const dailyStartValue = ref(DEFAULT_DAILY_START)
@@ -20,6 +22,9 @@ export const useCounterStore = defineStore('counter', () => {
   const showSuccess = ref(false)
   const bulkMode = ref('hundred') // 'single' = -1 per tick, 'hundred' = -100 per 100 ticks, 'thousand' = -1000 per 1000 ticks
   const tickCounter = ref(0) // tracks ticks in bulk mode
+  const countUpMode = ref(true) // true = count up towards target, false = count down from daily start
+  const targetGoal = ref(DEFAULT_TARGET_GOAL) // The goal to reach (1 million)
+  const keepsRemaining = ref(DEFAULT_KEEPY_UPS_REMAINING) // How many keepy-upps remaining to hit goal
 
   // Computed
   const formattedCounter = computed(() => {
@@ -27,6 +32,12 @@ export const useCounterStore = defineStore('counter', () => {
   })
 
   const progress = computed(() => {
+    if (countUpMode.value) {
+      // Progress towards 1 million
+      const startValue = targetGoal.value - keepsRemaining.value
+      const progressMade = counter.value - startValue
+      return (progressMade / keepsRemaining.value) * 100
+    }
     return ((dailyStartValue.value - counter.value) / dailyStartValue.value) * 100
   })
 
@@ -35,20 +46,29 @@ export const useCounterStore = defineStore('counter', () => {
   })
 
   const isComplete = computed(() => {
+    if (countUpMode.value) {
+      return counter.value >= targetGoal.value
+    }
     return counter.value <= 0
   })
 
   // Actions
   function tick() {
-    if (!isPaused.value && counter.value > 0) {
+    if (!isPaused.value && !isComplete.value) {
       lastTickTimestamp.value = Date.now()
       
+      const increment = countUpMode.value ? 1 : -1
+      
       if (bulkMode.value === 'thousand') {
-        // Thousand mode: decrement 1000 every 1000 ticks
+        // Thousand mode: change by 1000 every 1000 ticks
         tickCounter.value++
         if (tickCounter.value >= 1000) {
           tickCounter.value = 0
-          counter.value = Math.max(0, counter.value - 1000)
+          if (countUpMode.value) {
+            counter.value = Math.min(targetGoal.value, counter.value + 1000)
+          } else {
+            counter.value = Math.max(0, counter.value - 1000)
+          }
           isAnimating.value = true
           
           setTimeout(() => {
@@ -56,11 +76,15 @@ export const useCounterStore = defineStore('counter', () => {
           }, 150)
         }
       } else if (bulkMode.value === 'hundred') {
-        // Hundred mode: decrement 100 every 100 ticks
+        // Hundred mode: change by 100 every 100 ticks
         tickCounter.value++
         if (tickCounter.value >= 100) {
           tickCounter.value = 0
-          counter.value = Math.max(0, counter.value - 100)
+          if (countUpMode.value) {
+            counter.value = Math.min(targetGoal.value, counter.value + 100)
+          } else {
+            counter.value = Math.max(0, counter.value - 100)
+          }
           isAnimating.value = true
           
           setTimeout(() => {
@@ -68,8 +92,12 @@ export const useCounterStore = defineStore('counter', () => {
           }, 150)
         }
       } else {
-        // Single mode: decrement 1 every tick
-        counter.value--
+        // Single mode: change by 1 every tick
+        if (countUpMode.value) {
+          counter.value = Math.min(targetGoal.value, counter.value + 1)
+        } else {
+          counter.value = Math.max(0, counter.value - 1)
+        }
         isAnimating.value = true
         
         setTimeout(() => {
@@ -78,8 +106,7 @@ export const useCounterStore = defineStore('counter', () => {
       }
 
       // Check for completion
-      if (counter.value <= 0) {
-        counter.value = 0
+      if (isComplete.value) {
         isPaused.value = true
         showSuccess.value = true
         tickCounter.value = 0
@@ -104,7 +131,7 @@ export const useCounterStore = defineStore('counter', () => {
   }
 
   function resume() {
-    if (counter.value > 0) {
+    if (!isComplete.value) {
       isPaused.value = false
       lastTickTimestamp.value = Date.now()
       persistState()
@@ -112,7 +139,11 @@ export const useCounterStore = defineStore('counter', () => {
   }
 
   function resetDay() {
-    counter.value = dailyStartValue.value
+    if (countUpMode.value) {
+      counter.value = targetGoal.value - keepsRemaining.value
+    } else {
+      counter.value = dailyStartValue.value
+    }
     isPaused.value = true
     showSuccess.value = false
     lastTickTimestamp.value = Date.now()
@@ -128,11 +159,23 @@ export const useCounterStore = defineStore('counter', () => {
 
   function setCounter(value) {
     const num = parseInt(value, 10)
-    if (!isNaN(num) && num >= 0 && num <= dailyStartValue.value) {
-      counter.value = num
-      showSuccess.value = num <= 0
-      persistState()
-      return true
+    if (countUpMode.value) {
+      // In count up mode, counter can be between start value and target
+      const startValue = targetGoal.value - keepsRemaining.value
+      if (!isNaN(num) && num >= startValue && num <= targetGoal.value) {
+        counter.value = num
+        showSuccess.value = num >= targetGoal.value
+        persistState()
+        return true
+      }
+    } else {
+      // In count down mode, counter is between 0 and daily start
+      if (!isNaN(num) && num >= 0 && num <= dailyStartValue.value) {
+        counter.value = num
+        showSuccess.value = num <= 0
+        persistState()
+        return true
+      }
     }
     return false
   }
@@ -175,6 +218,43 @@ export const useCounterStore = defineStore('counter', () => {
     }
   }
 
+  function setCountUpMode(value) {
+    countUpMode.value = !!value
+    // Reset counter appropriately when switching modes
+    if (countUpMode.value) {
+      counter.value = targetGoal.value - keepsRemaining.value
+    } else {
+      counter.value = dailyStartValue.value
+    }
+    tickCounter.value = 0
+    showSuccess.value = false
+    persistState()
+  }
+
+  function setTargetGoal(value) {
+    const num = parseInt(value, 10)
+    if (!isNaN(num) && num > 0 && num <= 10000000) {
+      targetGoal.value = num
+      persistState()
+      return true
+    }
+    return false
+  }
+
+  function setKeepsRemaining(value) {
+    const num = parseInt(value, 10)
+    if (!isNaN(num) && num > 0 && num <= targetGoal.value) {
+      keepsRemaining.value = num
+      // Update counter if in count up mode
+      if (countUpMode.value) {
+        counter.value = targetGoal.value - num
+      }
+      persistState()
+      return true
+    }
+    return false
+  }
+
   function hideSuccess() {
     showSuccess.value = false
   }
@@ -191,6 +271,9 @@ export const useCounterStore = defineStore('counter', () => {
       lastDateString: getTodayDateString(),
       bulkMode: bulkMode.value,
       tickCounter: tickCounter.value,
+      countUpMode: countUpMode.value,
+      targetGoal: targetGoal.value,
+      keepsRemaining: keepsRemaining.value,
     })
   }
 
@@ -210,15 +293,27 @@ export const useCounterStore = defineStore('counter', () => {
         const newDay = Math.min(saved.currentDay + daysDiff, TOTAL_DAYS)
         currentDay.value = newDay
         
-        // Reset counter for new day
-        counter.value = saved.dailyStartValue || DEFAULT_DAILY_START
+        // Restore mode settings
+        countUpMode.value = saved.countUpMode ?? true
+        targetGoal.value = saved.targetGoal ?? DEFAULT_TARGET_GOAL
+        keepsRemaining.value = saved.keepsRemaining ?? DEFAULT_KEEPY_UPS_REMAINING
         dailyStartValue.value = saved.dailyStartValue || DEFAULT_DAILY_START
         tickRateMs.value = saved.tickRateMs || DEFAULT_TICK_RATE_MS
+        
+        // Reset counter for new day based on mode
+        if (countUpMode.value) {
+          counter.value = targetGoal.value - keepsRemaining.value
+        } else {
+          counter.value = dailyStartValue.value
+        }
         isPaused.value = true
         challengeStartDate.value = saved.challengeStartDate || todayStr
       } else {
         // Same day - restore state
-        counter.value = saved.counter ?? DEFAULT_DAILY_START
+        countUpMode.value = saved.countUpMode ?? true
+        targetGoal.value = saved.targetGoal ?? DEFAULT_TARGET_GOAL
+        keepsRemaining.value = saved.keepsRemaining ?? DEFAULT_KEEPY_UPS_REMAINING
+        counter.value = saved.counter ?? (countUpMode.value ? targetGoal.value - keepsRemaining.value : DEFAULT_DAILY_START)
         currentDay.value = saved.currentDay ?? 1
         dailyStartValue.value = saved.dailyStartValue ?? DEFAULT_DAILY_START
         tickRateMs.value = saved.tickRateMs ?? DEFAULT_TICK_RATE_MS
@@ -231,28 +326,39 @@ export const useCounterStore = defineStore('counter', () => {
           const elapsed = Date.now() - saved.lastTickTimestamp
           const missedTicks = Math.floor(elapsed / (saved.tickRateMs || DEFAULT_TICK_RATE_MS))
           if (bulkMode.value === 'thousand') {
-            // In thousand mode, add missed ticks to counter and calculate decrements
             const totalTicks = tickCounter.value + missedTicks
-            const decrements = Math.floor(totalTicks / 1000)
+            const changes = Math.floor(totalTicks / 1000)
             tickCounter.value = totalTicks % 1000
-            counter.value = Math.max(0, counter.value - (decrements * 1000))
+            if (countUpMode.value) {
+              counter.value = Math.min(targetGoal.value, counter.value + (changes * 1000))
+            } else {
+              counter.value = Math.max(0, counter.value - (changes * 1000))
+            }
           } else if (bulkMode.value === 'hundred') {
-            // In hundred mode, add missed ticks to counter and calculate decrements
             const totalTicks = tickCounter.value + missedTicks
-            const decrements = Math.floor(totalTicks / 100)
+            const changes = Math.floor(totalTicks / 100)
             tickCounter.value = totalTicks % 100
-            counter.value = Math.max(0, counter.value - (decrements * 100))
+            if (countUpMode.value) {
+              counter.value = Math.min(targetGoal.value, counter.value + (changes * 100))
+            } else {
+              counter.value = Math.max(0, counter.value - (changes * 100))
+            }
           } else {
-            counter.value = Math.max(0, counter.value - missedTicks)
+            if (countUpMode.value) {
+              counter.value = Math.min(targetGoal.value, counter.value + missedTicks)
+            } else {
+              counter.value = Math.max(0, counter.value - missedTicks)
+            }
           }
         }
         
         isPaused.value = saved.isPaused ?? true
-        showSuccess.value = counter.value <= 0
+        showSuccess.value = isComplete.value
       }
     } else {
-      // First time - initialize with defaults
+      // First time - initialize with defaults (count up mode)
       challengeStartDate.value = todayStr
+      counter.value = DEFAULT_TARGET_GOAL - DEFAULT_KEEPY_UPS_REMAINING
     }
 
     lastTickTimestamp.value = Date.now()
@@ -278,6 +384,9 @@ export const useCounterStore = defineStore('counter', () => {
     showSuccess,
     bulkMode,
     tickCounter,
+    countUpMode,
+    targetGoal,
+    keepsRemaining,
     TOTAL_DAYS,
 
     // Computed
@@ -298,6 +407,9 @@ export const useCounterStore = defineStore('counter', () => {
     setDailyStartValue,
     setTickRateMs,
     setBulkMode,
+    setCountUpMode,
+    setTargetGoal,
+    setKeepsRemaining,
     hideSuccess,
     persistState,
     initializeState,
